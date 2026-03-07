@@ -1,12 +1,5 @@
 "use client";
-
-import { useEffect } from "react";
-import { ensureAnonymousSession } from "@/app/lib/auth";
-
+// localStorage 모드에서는 auth 불필요
 export function AnonAuthProvider({ children }: { children: React.ReactNode }) {
-  useEffect(() => {
-    ensureAnonymousSession();
-  }, []);
-
   return <>{children}</>;
 }
