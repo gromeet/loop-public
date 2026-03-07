@@ -167,9 +167,8 @@ export default function GuidePage() {
       </div>
 
       {/* 저작권 */}
-      <div className="mt-6 text-center text-xs text-gray-400 space-y-0.5">
-        <p>만든 사람 : 그로밋</p>
-        <p>무단 배포 금지</p>
+      <div className="mt-6 text-center text-xs text-gray-400">
+        <p>© 그로밋</p>
       </div>
     </div>
   );
