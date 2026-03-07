@@ -18,7 +18,7 @@ export default function GuidePage() {
           <li>• 모든 데이터는 <strong>내 기기(브라우저)에만</strong> 저장됩니다</li>
           <li>• 서버에 업로드되지 않아요 — 누구도 내 기록을 볼 수 없습니다</li>
           <li>• 앱을 만든 사람도, 운영자도 내 일기를 볼 수 없습니다</li>
-          <li>• AI 회고 기능을 쓸 때만 내용 일부가 AI에 전송되고, 저장되지 않습니다</li>
+
         </ul>
       </div>
 
