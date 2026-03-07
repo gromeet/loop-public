@@ -11,6 +11,17 @@ export default function GuidePage() {
         <p className="text-sm text-gray-400 mt-1">Loop 시작 가이드</p>
       </div>
 
+      {/* 프라이버시 안내 */}
+      <div className="mb-4 rounded-xl bg-green-50 border border-green-200 p-4">
+        <p className="text-sm font-semibold text-green-800 mb-2">🔒 내 기록은 나만 볼 수 있어요</p>
+        <ul className="text-sm text-green-700 space-y-1">
+          <li>• 모든 데이터는 <strong>내 기기(브라우저)에만</strong> 저장됩니다</li>
+          <li>• 서버에 업로드되지 않아요 — 누구도 내 기록을 볼 수 없습니다</li>
+          <li>• 앱을 만든 사람도, 운영자도 내 일기를 볼 수 없습니다</li>
+          <li>• AI 회고 기능을 쓸 때만 내용 일부가 AI에 전송되고, 저장되지 않습니다</li>
+        </ul>
+      </div>
+
       {/* 데이터 저장 안내 */}
       <div className="mb-5 rounded-xl bg-amber-50 border border-amber-200 p-4">
         <p className="text-sm font-semibold text-amber-800 mb-1">⚠️ 데이터 저장 방식 안내</p>
