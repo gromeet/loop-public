@@ -3,7 +3,12 @@
 import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { createClient } from "@/app/lib/supabase/client";
+import {
+  getGoals,
+  getDailyEntry,
+  upsertDailyEntry,
+  addGoal,
+} from "@/app/lib/storage";
 
 interface WeeklyGoal {
   id: string;
@@ -68,21 +73,17 @@ function DailyContent() {
     loadData();
   }, [targetISO]);
 
-  async function loadData() {
+  function loadData() {
     try {
-      const supabase = createClient();
+      const allGoals = getGoals();
+      const goals = allGoals
+        .filter((g) => g.period === "weekly" && g.status === "active")
+        .map((g) => ({ id: g.id, title: g.title }));
 
-      const [
-        { data: goals },
-        { data: entry },
-        { data: prevEntry },
-      ] = await Promise.all([
-        supabase.from("goals").select("id, title").eq("period", "weekly").eq("status", "active"),
-        supabase.from("daily_entries").select("*").eq("date", targetISO).maybeSingle(),
-        supabase.from("daily_entries").select("tomorrow").eq("date", prevISO).maybeSingle(),
-      ]);
+      const entry = getDailyEntry(targetISO);
+      const prevEntry = getDailyEntry(prevISO);
 
-      setWeeklyGoals(goals || []);
+      setWeeklyGoals(goals);
       setYesterdayTomorrow(prevEntry?.tomorrow || "");
 
       if (entry) {
@@ -94,6 +95,14 @@ function DailyContent() {
         setGratitude([lines[0] || "", lines[1] || "", lines[2] || ""]);
         setTomorrowGoalId(entry.tomorrow_goal_id || null);
         setCheckedGoals(entry.checked_goals || []);
+      } else {
+        setEntryId(null);
+        setMood("");
+        setSummary("");
+        setTomorrow("");
+        setGratitude(["", "", ""]);
+        setTomorrowGoalId(null);
+        setCheckedGoals([]);
       }
     } catch (e) {
       console.error(e);
@@ -102,7 +111,7 @@ function DailyContent() {
     }
   }
 
-  async function handleSave() {
+  function handleSave() {
     if (!summary.trim()) {
       setSaveError("한 줄 요약은 필수입니다.");
       return;
@@ -111,9 +120,7 @@ function DailyContent() {
     setSaveError("");
 
     try {
-      const supabase = createClient();
       const payload = {
-        date: targetISO,
         mood,
         summary,
         tomorrow,
@@ -121,15 +128,13 @@ function DailyContent() {
         checked_goals: checkedGoals,
       };
 
+      const data = upsertDailyEntry(targetISO, payload);
+
       if (entryId) {
-        const { error } = await supabase.from("daily_entries").update(payload).eq("id", entryId);
-        if (error) throw error;
         setSaveSuccess(true);
         setTimeout(() => setSaveSuccess(false), 2000);
       } else {
-        const { data, error } = await supabase.from("daily_entries").insert(payload).select("id").single();
-        if (error) throw error;
-        if (data) setEntryId(data.id);
+        setEntryId(data.id);
         setSaveSuccess(true);
         // 과거 날짜면 히스토리로, 오늘이면 홈으로
         setTimeout(() => router.push(isPastDate ? "/history" : "/?t=" + Date.now()), 800);
@@ -148,21 +153,24 @@ function DailyContent() {
     );
   }
 
-  async function addTomorrowAsGoal() {
+  function addTomorrowAsGoal() {
     if (!tomorrow.trim() || addingGoal) return;
     setAddingGoal(true);
     try {
-      const supabase = createClient();
-      await supabase.from("goals").insert({
+      addGoal({
         title: tomorrow.trim(),
         period: "weekly",
         status: "active",
         area: "business",
         why: "",
+        goal_type: "task",
       });
       setAddedAsGoal(true);
-      const { data } = await supabase.from("goals").select("id, title").eq("period", "weekly").eq("status", "active");
-      setWeeklyGoals(data || []);
+      const allGoals = getGoals();
+      const goals = allGoals
+        .filter((g) => g.period === "weekly" && g.status === "active")
+        .map((g) => ({ id: g.id, title: g.title }));
+      setWeeklyGoals(goals);
     } catch (e) {
       console.error(e);
     } finally {

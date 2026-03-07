@@ -1,7 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createClient } from "@/app/lib/supabase/client";
+import {
+  getGoals,
+  addGoal,
+  updateGoal,
+  deleteGoal as removeGoal,
+  getDailyEntry,
+  upsertDailyEntry,
+} from "@/app/lib/storage";
 
 interface Goal {
   id: string;
@@ -52,26 +59,21 @@ export default function GoalsPage() {
     loadTodayChecks();
   }, []);
 
-  async function loadTodayChecks() {
-    const supabase = createClient();
-    const { data } = await supabase
-      .from("daily_entries")
-      .select("checked_goals")
-      .eq("date", todayISO)
-      .maybeSingle();
-    setTodayCheckedGoals(data?.checked_goals || []);
+  function loadTodayChecks() {
+    const entry = getDailyEntry(todayISO);
+    setTodayCheckedGoals(entry?.checked_goals || []);
   }
 
-  async function loadGoals() {
+  function loadGoals() {
     setLoading(true);
-    const supabase = createClient();
-    const { data } = await supabase
-      .from("goals")
-      .select("*")
-      .eq("period", tab)
-      .order("status", { ascending: true })
-      .order("created_at", { ascending: false });
-    setGoals(data || []);
+    const allGoals = getGoals();
+    const filtered = allGoals
+      .filter((g) => g.period === tab)
+      .sort((a, b) => {
+        if (a.status !== b.status) return a.status.localeCompare(b.status);
+        return b.created_at.localeCompare(a.created_at);
+      });
+    setGoals(filtered);
     setLoading(false);
   }
 
@@ -102,60 +104,44 @@ export default function GoalsPage() {
     setGoalType("task");
   }
 
-  async function handleSubmit(e: React.FormEvent) {
+  function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const supabase = createClient();
 
     if (editGoal) {
-      // 수정
-      await supabase
-        .from("goals")
-        .update({ title, why, area, goal_type: goalType })
-        .eq("id", editGoal.id);
+      updateGoal(editGoal.id, { title, why, area, goal_type: goalType });
     } else {
-      // 추가
-      await supabase.from("goals").insert({ title, why, area, period: tab, status: "active", goal_type: goalType });
+      addGoal({
+        title,
+        why,
+        area,
+        period: tab as "weekly" | "quarterly" | "yearly",
+        status: "active",
+        goal_type: goalType,
+      });
     }
 
     closeModal();
     loadGoals();
   }
 
-  async function toggleStatus(goal: Goal) {
-    const supabase = createClient();
+  function toggleStatus(goal: Goal) {
     const newStatus = goal.status === "active" ? "done" : "active";
-    await supabase.from("goals").update({ status: newStatus }).eq("id", goal.id);
+    updateGoal(goal.id, { status: newStatus as "active" | "done" });
     loadGoals();
   }
 
-  async function toggleDailyCheck(goalId: string) {
-    const supabase = createClient();
+  function toggleDailyCheck(goalId: string) {
     const isChecked = todayCheckedGoals.includes(goalId);
     const newChecked = isChecked
       ? todayCheckedGoals.filter((id) => id !== goalId)
       : [...todayCheckedGoals, goalId];
 
-    // update 우선 (기존 summary/mood/tomorrow 보존)
-    const { data: updated } = await supabase
-      .from("daily_entries")
-      .update({ checked_goals: newChecked })
-      .eq("date", todayISO)
-      .select()
-      .maybeSingle();
-
-    // 오늘 entry 없으면 새로 생성
-    if (!updated) {
-      await supabase
-        .from("daily_entries")
-        .insert({ date: todayISO, checked_goals: newChecked, summary: "", mood: "", tomorrow: "" });
-    }
-
+    upsertDailyEntry(todayISO, { checked_goals: newChecked });
     setTodayCheckedGoals(newChecked);
   }
 
-  async function deleteGoal(id: string) {
-    const supabase = createClient();
-    await supabase.from("goals").delete().eq("id", id);
+  function handleDeleteGoal(id: string) {
+    removeGoal(id);
     setDeleteId(null);
     loadGoals();
   }
@@ -369,7 +355,7 @@ export default function GoalsPage() {
                 취소
               </button>
               <button
-                onClick={() => deleteGoal(deleteId)}
+                onClick={() => handleDeleteGoal(deleteId)}
                 className="flex-1 py-2.5 rounded-xl bg-red-500 text-white text-sm font-medium"
               >
                 삭제

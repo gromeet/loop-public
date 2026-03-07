@@ -4,11 +4,12 @@
 export type Goal = {
   id: string;
   user_id: string;
-  period: 'yearly' | 'monthly' | 'weekly';
+  period: 'yearly' | 'quarterly' | 'weekly';
   area: string;
   title: string;
   why: string;
   status: 'active' | 'done' | 'dropped';
+  goal_type: 'task' | 'habit';
   created_at: string;
 };
 
@@ -21,6 +22,7 @@ export type DailyEntry = {
   tomorrow: string;
   tomorrow_goal_id?: string | null;
   checked_goals: string[];
+  gratitude?: string;
   created_at: string;
   updated_at: string;
 };
@@ -28,7 +30,7 @@ export type DailyEntry = {
 export type Reflection = {
   id: string;
   user_id: string;
-  type: 'weekly' | 'monthly' | 'yearly';
+  type: 'weekly' | 'quarterly';
   good: string;
   bad: string;
   next: string;
@@ -103,6 +105,7 @@ export function upsertDailyEntry(date: string, updates: Partial<DailyEntry>): Da
       tomorrow: '',
       tomorrow_goal_id: null,
       checked_goals: [],
+      gratitude: '',
       created_at: now(),
       updated_at: now(),
       ...updates,
@@ -123,12 +126,25 @@ export function getReflections(): Reflection[] {
   } catch { return []; }
 }
 
+export function saveReflections(refs: Reflection[]): void {
+  localStorage.setItem('loop_reflections', JSON.stringify(refs));
+}
+
 export function addReflection(ref: Omit<Reflection, 'id' | 'user_id' | 'created_at'>): Reflection {
   const refs = getReflections();
   const newRef: Reflection = { ...ref, id: genId(), user_id: 'local', created_at: now() };
   refs.push(newRef);
-  localStorage.setItem('loop_reflections', JSON.stringify(refs));
+  saveReflections(refs);
   return newRef;
+}
+
+export function updateReflection(id: string, updates: Partial<Reflection>): Reflection | null {
+  const refs = getReflections();
+  const idx = refs.findIndex(r => r.id === id);
+  if (idx === -1) return null;
+  refs[idx] = { ...refs[idx], ...updates };
+  saveReflections(refs);
+  return refs[idx];
 }
 
 export function getReflectionsByType(type: string): Reflection[] {

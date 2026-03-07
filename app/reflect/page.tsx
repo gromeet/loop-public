@@ -1,7 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createClient } from "@/app/lib/supabase/client";
+import {
+  getReflectionsByType,
+  addReflection,
+  updateReflection,
+  getDailyEntries,
+} from "@/app/lib/storage";
 
 interface Reflection {
   id: string;
@@ -59,21 +64,18 @@ export default function ReflectPage() {
     loadReflections();
   }, [tab]);
 
-  async function loadReflections() {
+  function loadReflections() {
     setLoading(true);
     if (tab === "quarterly") {
       setEditingId(null);
     }
-    const supabase = createClient();
-    const { data } = await supabase
-      .from("reflections")
-      .select("*")
-      .eq("type", tab)
-      .order("created_at", { ascending: false });
-    setReflections(data || []);
+
+    const data = getReflectionsByType(tab)
+      .sort((a, b) => b.created_at.localeCompare(a.created_at));
+    setReflections(data);
 
     // 주간 탭: 이번 주 저장된 회고 있으면 폼에 불러오기
-    if (tab === "weekly" && data && data.length > 0) {
+    if (tab === "weekly" && data.length > 0) {
       const mondayISO = getMondayISO();
       const thisWeekReflect = data.find(
         (r) => new Date(r.created_at) >= new Date(mondayISO)
@@ -92,27 +94,25 @@ export default function ReflectPage() {
     }
 
     if (tab === "weekly") {
-      await loadWeekSummary(supabase);
+      loadWeekSummary();
     } else {
-      await loadQuarterSummary(supabase);
+      loadQuarterSummary();
     }
 
     setLoading(false);
   }
 
-  async function loadWeekSummary(supabase: ReturnType<typeof createClient>) {
+  function loadWeekSummary() {
     const days7 = Array.from({ length: 7 }, (_, i) => {
       const d = new Date();
       d.setDate(d.getDate() - i);
       return d.toISOString().split("T")[0];
     });
 
-    const { data: entries } = await supabase
-      .from("daily_entries")
-      .select("date, mood, summary, checked_goals")
-      .in("date", days7);
+    const allEntries = getDailyEntries();
+    const entries = allEntries.filter((e) => days7.includes(e.date));
 
-    if (!entries || entries.length === 0) {
+    if (entries.length === 0) {
       setWeekSummary(null);
       return;
     }
@@ -139,15 +139,14 @@ export default function ReflectPage() {
     setWeekSummary({ recorded: entries.length, avgMood, totalChecked, highlights });
   }
 
-  async function loadQuarterSummary(supabase: ReturnType<typeof createClient>) {
+  function loadQuarterSummary() {
     const today = new Date().toISOString().split("T")[0];
-    const { data: qEntries } = await supabase
-      .from("daily_entries")
-      .select("date, mood, checked_goals")
-      .gte("date", getQuarterStart())
-      .lte("date", today);
+    const qStart = getQuarterStart();
 
-    if (!qEntries || qEntries.length === 0) {
+    const allEntries = getDailyEntries();
+    const qEntries = allEntries.filter((e) => e.date >= qStart && e.date <= today);
+
+    if (qEntries.length === 0) {
       setQuarterSummary(null);
       return;
     }
@@ -173,7 +172,28 @@ export default function ReflectPage() {
     if (tab !== "weekly") return;
     setGenerating(true);
     try {
-      const res = await fetch("/api/reflect-draft", { method: "POST" });
+      // Send diary data from localStorage to API
+      const days7 = Array.from({ length: 7 }, (_, i) => {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        return d.toISOString().split("T")[0];
+      });
+      const allEntries = getDailyEntries();
+      const weekEntries = allEntries
+        .filter((e) => days7.includes(e.date))
+        .map((e) => ({
+          date: e.date,
+          mood: e.mood,
+          summary: e.summary,
+          tomorrow: e.tomorrow,
+          checked_goals: e.checked_goals,
+        }));
+
+      const res = await fetch("/api/reflect-draft", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ entries: weekEntries }),
+      });
       if (!res.ok) throw new Error("생성 실패");
       const draft = await res.json();
       if (draft.good) setGood(draft.good);
@@ -186,25 +206,16 @@ export default function ReflectPage() {
     }
   }
 
-  async function handleSave() {
+  function handleSave() {
     if (!good && !bad && !next) return;
     setSaving(true);
     try {
-      const supabase = createClient();
       if (editingId) {
-        await supabase
-          .from("reflections")
-          .update({ good, bad, next })
-          .eq("id", editingId);
+        updateReflection(editingId, { good, bad, next });
       } else {
-        await supabase.from("reflections").insert({
-          type: tab,
-          good,
-          bad,
-          next,
-        });
+        addReflection({ type: tab, good, bad, next });
       }
-      await loadReflections();
+      loadReflections();
     } finally {
       setSaving(false);
     }

@@ -1,22 +1,8 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/app/lib/supabase/server";
 
-export async function POST() {
-  const supabase = await createClient();
-
-  // 지난 7일 날짜 배열
-  const days7 = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date();
-    d.setDate(d.getDate() - i);
-    return d.toISOString().split("T")[0];
-  });
-
-  // 지난 7일 일기 로드
-  const { data: entries } = await supabase
-    .from("daily_entries")
-    .select("date, mood, summary, tomorrow, checked_goals")
-    .in("date", days7)
-    .order("date", { ascending: false });
+export async function POST(request: Request) {
+  const body = await request.json().catch(() => null);
+  const entries = body?.entries;
 
   if (!entries || entries.length === 0) {
     return NextResponse.json({ error: "일기 데이터 없음" }, { status: 400 });
@@ -24,8 +10,8 @@ export async function POST() {
 
   // 프롬프트 구성
   const diaryText = entries
-    .map((e) => {
-      const lines = [];
+    .map((e: { date: string; mood?: string; summary?: string; tomorrow?: string; checked_goals?: string[] }) => {
+      const lines: string[] = [];
       lines.push(`[${e.date}]`);
       if (e.mood) lines.push(`기분: ${e.mood}`);
       if (e.summary) lines.push(`오늘: ${e.summary}`);

@@ -1,9 +1,4 @@
-import { createClient } from "@/app/lib/supabase/client";
-
+// Auth is no longer needed — localStorage-based, no server auth
 export async function ensureAnonymousSession() {
-  const supabase = createClient();
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session) {
-    await supabase.auth.signInAnonymously();
-  }
+  // no-op: localStorage doesn't require authentication
 }

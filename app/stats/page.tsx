@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createClient } from "@/app/lib/supabase/client";
 import { getQuarterInfo } from "@/app/lib/rhythm";
+import { getDailyEntries, getGoals } from "@/app/lib/storage";
 
 interface DailyEntry {
   date: string;
@@ -20,10 +20,6 @@ interface Goal {
 const moodEmojis = ["😫", "😔", "😐", "😊", "🤩"];
 const moodLabels = ["힘들어", "우울해", "보통", "좋아", "최고"];
 const moodColors = ["bg-red-300", "bg-orange-300", "bg-yellow-300", "bg-green-300", "bg-emerald-400"];
-
-function formatDateKST(date: Date): string {
-  return date.toLocaleDateString("ko-KR", { timeZone: "Asia/Seoul" }).replace(/\. /g, "-").replace(/\./g, "").trim().replace(/ /g, "-");
-}
 
 function getKSTToday(): string {
   const now = new Date();
@@ -76,17 +72,17 @@ export default function StatsPage() {
     loadData();
   }, []);
 
-  async function loadData() {
-    const supabase = createClient();
+  function loadData() {
     const since = subtractDays(today, 89); // last 90 days
 
-    const [{ data: entryData }, { data: goalData }] = await Promise.all([
-      supabase.from("daily_entries").select("date, mood, summary, checked_goals").gte("date", since).order("date"),
-      supabase.from("goals").select("id, status, period"),
-    ]);
+    const allEntries = getDailyEntries()
+      .filter((e) => e.date >= since)
+      .sort((a, b) => a.date.localeCompare(b.date));
 
-    setEntries(entryData || []);
-    setGoals(goalData || []);
+    const allGoals = getGoals();
+
+    setEntries(allEntries);
+    setGoals(allGoals);
     setLoading(false);
   }
 
@@ -173,7 +169,6 @@ export default function StatsPage() {
   // 이번 달 기록율
   const thisMonth = today.slice(0, 7);
   const thisMonthCount = monthCounts[thisMonth] || 0;
-  const daysInMonth = new Date(parseInt(thisMonth.slice(0,4)), parseInt(thisMonth.slice(5)), 0).getDate();
   const todayDay = parseInt(today.slice(8));
   const monthRate = Math.round((thisMonthCount / todayDay) * 100);
 

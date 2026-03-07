@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { createClient } from "@/app/lib/supabase/client";
+import { getDailyEntries } from "@/app/lib/storage";
 
 interface DailyEntry {
   id: string;
@@ -26,14 +26,11 @@ export default function HistoryPage() {
     loadEntries();
   }, []);
 
-  async function loadEntries() {
-    const supabase = createClient();
-    const { data } = await supabase
-      .from("daily_entries")
-      .select("*")
-      .order("date", { ascending: false })
-      .limit(50);
-    setEntries(data || []);
+  function loadEntries() {
+    const allEntries = getDailyEntries()
+      .sort((a, b) => b.date.localeCompare(a.date))
+      .slice(0, 50);
+    setEntries(allEntries);
     setLoading(false);
   }
 

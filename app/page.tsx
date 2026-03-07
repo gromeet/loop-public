@@ -2,10 +2,16 @@
 
 import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { createClient } from "@/app/lib/supabase/client";
 import Link from "next/link";
 import { getCurrentRhythm, getQuarterInfo } from "@/app/lib/rhythm";
 import { getDailyQuote } from "@/app/lib/quotes";
+import {
+  getGoals,
+  getDailyEntries,
+  getDailyEntry,
+  upsertDailyEntry,
+  getReflectionsByType,
+} from "@/app/lib/storage";
 
 interface Goal {
   id: string;
@@ -70,40 +76,45 @@ function HomeContent() {
     loadData();
   }, [searchParams]);
 
-  async function loadData() {
+  function loadData() {
     try {
-      const supabase = createClient();
-      const [
-        { data: todayEntryData },
-        { data: yesterdayEntryData },
-        { data: weekly },
-        { data: quarterly },
-        { data: yearly },
-        { data: entries },
-        { data: weeklyReflect },
-      ] = await Promise.all([
-        supabase.from("daily_entries").select("*").eq("date", todayISO).maybeSingle(),
-        supabase.from("daily_entries").select("tomorrow").eq("date", yesterdayISO).maybeSingle(),
-        supabase.from("goals").select("*").eq("period", "weekly").eq("status", "active").order("created_at"),
-        supabase.from("goals").select("*").eq("period", "quarterly").order("created_at"),
-        supabase.from("goals").select("*").eq("period", "yearly").order("created_at"),
-        supabase.from("daily_entries").select("date").not("summary", "is", null).not("summary", "eq", "").order("date", { ascending: false }).limit(90),
-        supabase.from("reflections").select("id, created_at").eq("type", "weekly").gte("created_at", getMondayISO()).limit(1).maybeSingle(),
-      ]);
+      const todayEntryData = getDailyEntry(todayISO);
+      const yesterdayEntryData = getDailyEntry(yesterdayISO);
+
+      const allGoals = getGoals();
+      const weekly = allGoals
+        .filter((g) => g.period === "weekly" && g.status === "active")
+        .sort((a, b) => a.created_at.localeCompare(b.created_at));
+      const quarterly = allGoals
+        .filter((g) => g.period === "quarterly")
+        .sort((a, b) => a.created_at.localeCompare(b.created_at));
+      const yearly = allGoals
+        .filter((g) => g.period === "yearly")
+        .sort((a, b) => a.created_at.localeCompare(b.created_at));
+
+      const allEntries = getDailyEntries()
+        .filter((e) => e.summary && e.summary.trim())
+        .sort((a, b) => b.date.localeCompare(a.date))
+        .slice(0, 90);
+
+      const mondayISO = getMondayISO();
+      const weeklyReflections = getReflectionsByType("weekly");
+      const thisWeekReflect = weeklyReflections.find(
+        (r) => new Date(r.created_at) >= new Date(mondayISO)
+      );
 
       setTodayEntry(todayEntryData);
       setYesterdayTomorrow(yesterdayEntryData?.tomorrow || "");
-      setWeeklyGoals(weekly || []);
-      setQuarterlyGoals(quarterly || []);
-      setYearlyGoals(yearly || []);
-      setWeeklyReflectDone(!!weeklyReflect);
+      setWeeklyGoals(weekly);
+      setQuarterlyGoals(quarterly);
+      setYearlyGoals(yearly);
+      setWeeklyReflectDone(!!thisWeekReflect);
 
-      if (entries && entries.length > 0) {
+      if (allEntries.length > 0) {
         let count = 0;
-        // 오늘 일기 미작성 시 어제부터 연산 (오늘 미작성이 streak 초기화 방지)
-        const hasTodayEntry = entries[0]?.date === todayISO;
+        const hasTodayEntry = allEntries[0]?.date === todayISO;
         const cursor = new Date(hasTodayEntry ? todayISO : yesterdayISO);
-        for (const e of entries) {
+        for (const e of allEntries) {
           if (e.date === cursor.toISOString().split("T")[0]) {
             count++;
             cursor.setDate(cursor.getDate() - 1);
@@ -118,31 +129,25 @@ function HomeContent() {
     }
   }
 
-  async function toggleGoalCheck(goalId: string) {
+  function toggleGoalCheck(goalId: string) {
     if (checkingGoal) return;
     setCheckingGoal(goalId);
     try {
-      const supabase = createClient();
       const current = todayEntry?.checked_goals || [];
       const isChecking = !current.includes(goalId);
       const newChecked = isChecking
         ? [...current, goalId]
         : current.filter((id) => id !== goalId);
 
-      // daily_entries 업데이트
-      const { data } = await supabase
-        .from("daily_entries")
-        .upsert(
-          { date: todayISO, checked_goals: newChecked,
-            summary: todayEntry?.summary || "", mood: todayEntry?.mood || "",
-            tomorrow: todayEntry?.tomorrow || "",
-            ...(todayEntry?.tomorrow_goal_id ? { tomorrow_goal_id: todayEntry.tomorrow_goal_id } : {}) },
-          { onConflict: "date" }
-        )
-        .select()
-        .single();
+      const data = upsertDailyEntry(todayISO, {
+        checked_goals: newChecked,
+        summary: todayEntry?.summary || "",
+        mood: todayEntry?.mood || "",
+        tomorrow: todayEntry?.tomorrow || "",
+        ...(todayEntry?.tomorrow_goal_id ? { tomorrow_goal_id: todayEntry.tomorrow_goal_id } : {}),
+      });
 
-      if (data) setTodayEntry(data);
+      setTodayEntry(data);
     } catch (e) {
       console.error(e);
     } finally {
