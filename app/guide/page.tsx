@@ -100,6 +100,34 @@ export default function GuidePage() {
         <p>하단 메뉴 <strong>기록</strong>에서 날짜별로 과거 일기를 확인할 수 있어요.</p>
       </Section>
 
+      {/* 앱처럼 설치 */}
+      <div className="mb-5 rounded-xl bg-indigo-50 border border-indigo-100 p-4">
+        <p className="text-sm font-semibold text-indigo-800 mb-3">📱 앱처럼 설치하는 방법</p>
+        <div className="space-y-4">
+          <div>
+            <p className="text-xs font-bold text-indigo-700 mb-1">🍎 아이폰 (Safari)</p>
+            <ol className="text-sm text-gray-700 space-y-1 list-none pl-0">
+              <li>1. Safari에서 <strong>https://loop-public.vercel.app</strong> 접속</li>
+              <li>2. 하단 공유 버튼(□↑) 탭</li>
+              <li>3. <strong>"홈 화면에 추가"</strong> 선택</li>
+              <li>4. 추가 → 홈 화면에 LOOP 아이콘 생성</li>
+            </ol>
+          </div>
+          <div>
+            <p className="text-xs font-bold text-indigo-700 mb-1">🤖 안드로이드 (Chrome)</p>
+            <ol className="text-sm text-gray-700 space-y-1 list-none pl-0">
+              <li>1. Chrome에서 <strong>https://loop-public.vercel.app</strong> 접속</li>
+              <li>2. 우측 상단 점 3개(⋮) 메뉴 탭</li>
+              <li>3. <strong>"앱 설치"</strong> 또는 <strong>"홈 화면에 추가"</strong> 선택</li>
+              <li>4. 설치 → 앱처럼 실행 가능</li>
+            </ol>
+          </div>
+          <p className="text-xs text-indigo-600 bg-indigo-100 rounded-lg p-2">
+            💡 설치 후에는 앱 아이콘으로 바로 실행 가능. 주소창 없는 전체화면으로 사용할 수 있어요.
+          </p>
+        </div>
+      </div>
+
       {/* FAQ */}
       <div className="mt-6 rounded-xl bg-white border border-gray-100 shadow-sm p-4">
         <p className="text-sm font-semibold text-gray-700 mb-3">❓ 자주 묻는 질문</p>
