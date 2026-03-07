@@ -4,3 +4,4 @@ node_modules/
 *.tsbuildinfo
 TASK*.md
 AGENT_TASK*.md
+.vercel
