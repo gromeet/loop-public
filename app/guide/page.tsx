@@ -151,7 +151,7 @@ export default function GuidePage() {
             브라우저 개발자도구(F12) &gt; Application &gt; Local Storage에서 직접 복사할 수 있어요. 추후 내보내기 기능을 추가할 예정입니다.
           </Faq>
           <Faq q="AI 회고 초안이 작동하지 않아요">
-            AI 초안 기능은 OpenAI 연동이 필요해요. 연동이 없는 경우 수동으로 회고를 작성해주세요.
+            운영자가 연동해둔 AI를 통해 자동으로 작동합니다. 문제가 생기면 아래 문의처로 연락해주세요.
           </Faq>
         </div>
       </div>
@@ -166,8 +166,17 @@ export default function GuidePage() {
         </Link>
       </div>
 
+      {/* 문의 */}
+      <div className="mt-6 rounded-xl bg-gray-50 border border-gray-100 p-4 text-center">
+        <p className="text-sm font-semibold text-gray-700 mb-1">💬 문의 / 기능 요청</p>
+        <p className="text-sm text-gray-500">
+          필요한 기능이나 오류가 있으면 <strong>그로밋</strong>에게 알려주세요.
+          주기적으로 업데이트하고 있습니다.
+        </p>
+      </div>
+
       {/* 저작권 */}
-      <div className="mt-6 text-center text-xs text-gray-400">
+      <div className="mt-4 text-center text-xs text-gray-400">
         <p>© 그로밋</p>
       </div>
     </div>
