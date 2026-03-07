@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import "./globals.css";
 import BottomNav from "./components/BottomNav";
+import GuideButton from "./components/GuideButton";
 import { AnonAuthProvider } from "@/app/components/AnonAuthProvider";
 
 const geistSans = Geist({
@@ -40,6 +41,7 @@ export default function RootLayout({
       <body className={`${geistSans.variable} font-sans antialiased bg-slate-100`}>
         {/* 데스크탑: 중앙에 모바일 프레임 — flex column으로 내비 항상 하단 고정 */}
         <div className="mx-auto max-w-sm min-h-screen bg-gray-50 shadow-xl">
+          <GuideButton />
           <main className="pb-20">
             <AnonAuthProvider>{children}</AnonAuthProvider>
           </main>
