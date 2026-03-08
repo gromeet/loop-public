@@ -59,13 +59,15 @@ function DailyContent() {
   const isPastDate = targetISO < todayISO;
 
   const targetDate = new Date(targetISO + "T00:00:00");
-  const prevDate = new Date(targetDate);
-  prevDate.setDate(prevDate.getDate() - 1);
-  const prevISO = prevDate.toISOString().split("T")[0];
 
-  const nextDate = new Date(targetDate);
-  nextDate.setDate(nextDate.getDate() + 1);
-  const nextISO = nextDate.toISOString().split("T")[0];
+  // toISOString()은 UTC 기준이라 KST 자정에서 날짜가 하루 빠짐 → 로컬 기준으로 직접 계산
+  function shiftISO(iso: string, days: number): string {
+    const [y, m, d] = iso.split("-").map(Number);
+    const date = new Date(y, m - 1, d + days);
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+  }
+  const prevISO = shiftISO(targetISO, -1);
+  const nextISO = shiftISO(targetISO, 1);
 
   const dateStr = targetDate.toLocaleDateString("ko-KR", {
     month: "long",
