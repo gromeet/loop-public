@@ -31,6 +31,18 @@ interface DailyEntry {
   checked_goals: string[];
 }
 
+// KST 기준 오늘 날짜 ISO (UTC toISOString 버그 방지)
+function getKSTDateISO(): string {
+  const now = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+}
+// 날짜 +/- 계산 (로컬 기준, UTC 변환 없음)
+function shiftISO(iso: string, days: number): string {
+  const [y, m, d] = iso.split("-").map(Number);
+  const date = new Date(y, m - 1, d + days);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
 function getMondayISO(): string {
   const now = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
   const dow = now.getDay();
@@ -57,6 +69,7 @@ function HomeContent() {
   const [todayEntry, setTodayEntry] = useState<DailyEntry | null>(null);
   const [yesterdayTomorrow, setYesterdayTomorrow] = useState("");
   const [streak, setStreak] = useState(0);
+  const [isFirstDay, setIsFirstDay] = useState(false);
   const [loading, setLoading] = useState(true);
   const [checkingGoal, setCheckingGoal] = useState<string | null>(null);
   const [weeklyReflectDone, setWeeklyReflectDone] = useState(false);
@@ -66,11 +79,8 @@ function HomeContent() {
   const quarterInfo = getQuarterInfo();
   const dailyQuote = getDailyQuote();
 
-  const today = new Date();
-  const todayISO = today.toISOString().split("T")[0];
-  const yesterday = new Date(today);
-  yesterday.setDate(yesterday.getDate() - 1);
-  const yesterdayISO = yesterday.toISOString().split("T")[0];
+  const todayISO = getKSTDateISO();
+  const yesterdayISO = shiftISO(todayISO, -1);
 
   useEffect(() => {
     loadData();
@@ -113,14 +123,17 @@ function HomeContent() {
       if (allEntries.length > 0) {
         let count = 0;
         const hasTodayEntry = allEntries[0]?.date === todayISO;
-        const cursor = new Date(hasTodayEntry ? todayISO : yesterdayISO);
+        let cursorISO = hasTodayEntry ? todayISO : yesterdayISO;
         for (const e of allEntries) {
-          if (e.date === cursor.toISOString().split("T")[0]) {
+          if (e.date === cursorISO) {
             count++;
-            cursor.setDate(cursor.getDate() - 1);
+            cursorISO = shiftISO(cursorISO, -1);
           } else break;
         }
         setStreak(count);
+        setIsFirstDay(false);
+      } else {
+        setIsFirstDay(true);
       }
     } catch (e) {
       console.error(e);
@@ -211,12 +224,14 @@ function HomeContent() {
           <h1 className="text-2xl font-black tracking-tight text-indigo-600">LOOP</h1>
           <p className="text-xs text-gray-400">{rhythm.weeklyStatus.label}</p>
         </div>
-        <div className="flex items-center gap-1.5 rounded-full bg-orange-50 px-3 py-1.5">
-          <span className="text-base">{streak > 0 ? "🔥" : "✨"}</span>
-          <span className="text-sm font-semibold text-orange-500">
-            {streak > 0 ? `${streak}일 연속` : "첫날"}
-          </span>
-        </div>
+        {(streak > 0 || isFirstDay) && (
+          <div className="flex items-center gap-1.5 rounded-full bg-orange-50 px-3 py-1.5">
+            <span className="text-base">{streak > 0 ? "🔥" : "✨"}</span>
+            <span className="text-sm font-semibold text-orange-500">
+              {streak > 0 ? `${streak}일 연속` : "첫날"}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* ── 주간 진행 바 ── */}
