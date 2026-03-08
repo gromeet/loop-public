@@ -7,6 +7,7 @@ import {
   updateReflection,
   getDailyEntries,
 } from "@/app/lib/storage";
+import { getKSTDateISO, shiftISO } from "@/app/lib/kst";
 
 interface Reflection {
   id: string;
@@ -41,10 +42,11 @@ function getMondayISO(): string {
 }
 
 function getQuarterStart(): string {
-  const now = new Date();
+  const now = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
   const month = now.getMonth();
   const quarterStartMonth = Math.floor(month / 3) * 3;
-  return new Date(now.getFullYear(), quarterStartMonth, 1).toISOString().split("T")[0];
+  const d = new Date(now.getFullYear(), quarterStartMonth, 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
 }
 
 export default function ReflectPage() {
@@ -103,11 +105,8 @@ export default function ReflectPage() {
   }
 
   function loadWeekSummary() {
-    const days7 = Array.from({ length: 7 }, (_, i) => {
-      const d = new Date();
-      d.setDate(d.getDate() - i);
-      return d.toISOString().split("T")[0];
-    });
+    const todayKST = getKSTDateISO();
+    const days7 = Array.from({ length: 7 }, (_, i) => shiftISO(todayKST, -i));
 
     const allEntries = getDailyEntries();
     const entries = allEntries.filter((e) => days7.includes(e.date));
@@ -140,7 +139,7 @@ export default function ReflectPage() {
   }
 
   function loadQuarterSummary() {
-    const today = new Date().toISOString().split("T")[0];
+    const today = getKSTDateISO();
     const qStart = getQuarterStart();
 
     const allEntries = getDailyEntries();
@@ -173,11 +172,8 @@ export default function ReflectPage() {
     setGenerating(true);
     try {
       // Send diary data from localStorage to API
-      const days7 = Array.from({ length: 7 }, (_, i) => {
-        const d = new Date();
-        d.setDate(d.getDate() - i);
-        return d.toISOString().split("T")[0];
-      });
+      const todayKST2 = getKSTDateISO();
+      const days7 = Array.from({ length: 7 }, (_, i) => shiftISO(todayKST2, -i));
       const allEntries = getDailyEntries();
       const weekEntries = allEntries
         .filter((e) => days7.includes(e.date))

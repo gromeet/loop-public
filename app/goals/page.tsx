@@ -9,6 +9,7 @@ import {
   getDailyEntry,
   upsertDailyEntry,
 } from "@/app/lib/storage";
+import { getKSTDateISO } from "@/app/lib/kst";
 
 interface Goal {
   id: string;
@@ -49,7 +50,7 @@ export default function GoalsPage() {
   const [goalType, setGoalType] = useState<"task" | "habit">("task");
   const [todayCheckedGoals, setTodayCheckedGoals] = useState<string[]>([]);
 
-  const todayISO = new Date().toISOString().split("T")[0];
+  const todayISO = getKSTDateISO();
 
   useEffect(() => {
     loadGoals();

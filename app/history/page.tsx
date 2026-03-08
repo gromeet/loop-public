@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { getDailyEntries } from "@/app/lib/storage";
+import { getKSTDateISO } from "@/app/lib/kst";
 
 interface DailyEntry {
   id: string;
@@ -20,7 +21,7 @@ export default function HistoryPage() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [pickedDate, setPickedDate] = useState("");
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = getKSTDateISO();
 
   useEffect(() => {
     loadEntries();
