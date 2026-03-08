@@ -213,9 +213,9 @@ function DailyContent() {
       {/* 날짜 빠른 이동 */}
       <div className="mb-4 flex gap-2">
         {[
-          { label: "어제", iso: prevISO },
+          { label: "← 이전", iso: prevISO },
           { label: "오늘", iso: todayISO },
-          { label: "내일", iso: nextISO },
+          { label: "다음 →", iso: nextISO },
         ].map(({ label, iso }) => {
           const isActive = targetISO === iso;
           return (
