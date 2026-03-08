@@ -63,6 +63,10 @@ function DailyContent() {
   prevDate.setDate(prevDate.getDate() - 1);
   const prevISO = prevDate.toISOString().split("T")[0];
 
+  const nextDate = new Date(targetDate);
+  nextDate.setDate(nextDate.getDate() + 1);
+  const nextISO = nextDate.toISOString().split("T")[0];
+
   const dateStr = targetDate.toLocaleDateString("ko-KR", {
     month: "long",
     day: "numeric",
@@ -209,18 +213,15 @@ function DailyContent() {
       {/* 날짜 빠른 이동 */}
       <div className="mb-4 flex gap-2">
         {[
-          { label: "어제", offset: -1 },
-          { label: "오늘", offset: 0 },
-          { label: "내일", offset: 1 },
-        ].map(({ label, offset }) => {
-          const d = new Date(todayISO);
-          d.setDate(d.getDate() + offset);
-          const iso = d.toISOString().split("T")[0];
+          { label: "어제", iso: prevISO },
+          { label: "오늘", iso: todayISO },
+          { label: "내일", iso: nextISO },
+        ].map(({ label, iso }) => {
           const isActive = targetISO === iso;
           return (
             <Link
               key={label}
-              href={offset === 0 ? "/daily" : `/daily?date=${iso}`}
+              href={iso === todayISO ? "/daily" : `/daily?date=${iso}`}
               className={`flex-1 rounded-lg py-1.5 text-center text-sm font-semibold transition-colors ${
                 isActive
                   ? "bg-indigo-600 text-white"
